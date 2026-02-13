@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Game Norma Sosial XG</title>
+
+<style>
+body{
+margin:0;
+font-family:Arial, sans-serif;
+background:linear-gradient(135deg,#667eea,#764ba2);
+text-align:center;
+color:white;
+}
+
+.wrapper{padding:25px;}
+
+.card{
+background:white;
+color:#333;
+border-radius:15px;
+padding:25px;
+max-width:760px;
+margin:auto;
+box-shadow:0 10px 25px rgba(0,0,0,0.25);
+}
+
+button{
+padding:12px;
+margin:8px;
+width:90%;
+border:none;
+border-radius:10px;
+background:#5c6cff;
+color:white;
+font-size:15px;
+cursor:pointer;
+transition:0.2s;
+}
+button:hover{transform:scale(1.05);}
+
+.correct{background:#2ecc71 !important;}
+.wrong{background:#e74c3c !important;}
+
+#progressBar{
+height:10px;
+background:#ddd;
+border-radius:10px;
+overflow:hidden;
+margin-bottom:15px;
+}
+#bar{
+height:10px;
+width:0%;
+background:#5c6cff;
+}
+
+.hidden{display:none;}
+
+canvas{
+position:fixed;
+top:0;
+left:0;
+pointer-events:none;
+}
+</style>
+</head>
+
+<body>
+<div class="wrapper">
+
+<canvas id="confetti"></canvas>
+
+<div class="card" id="start">
+<h2>🎮 GAME NORMA SOSIAL</h2>
+<p><b>Kelompok XG</b></p>
+<p>
+Samuel Jordan Soendjaja<br>
+Chelsea Queen Lovely Wijaya<br>
+Florence May Aquina<br>
+Jasmine Sandjaja<br>
+Rayvalo Stelovan Sinulingga
+</p>
+<button onclick="startGame()">START GAME</button>
+</div>
+
+<div class="card hidden" id="game">
+<div id="progressBar"><div id="bar"></div></div>
+<p id="info"></p>
+<h3 id="question"></h3>
+<div id="answers"></div>
+<p>⏱️ <span id="timer">15</span>s</p>
+</div>
+
+<div class="card hidden" id="result">
+<h2>🎉 SELESAI!</h2>
+<p id="finalScore"></p>
+<button onclick="location.reload()">Main Lagi</button>
+</div>
+
+<audio id="soundCorrect" src="https://assets.mixkit.co/sfx/preview/mixkit-correct-answer-tone-2870.mp3"></audio>
+<audio id="soundWrong" src="https://assets.mixkit.co/sfx/preview/mixkit-wrong-answer-fail-notification-946.mp3"></audio>
+
+</div>
+
+<script>
+const quiz=[
+{q:"Mengapa KDRT termasuk pelanggaran hukum?",a:["Masalah pribadi","Negara wajib melindungi korban","Tidak berdampak","Konflik biasa"],c:1},
+{q:"Norma hukum bersifat…",a:["Tidak tertulis","Hati nurani","Sanksi tegas","Bebas"],c:2},
+{q:"Korban tidak mencari bantuan karena…",a:["Takut stigma","Iseng","Aman","Tidak ada masalah"],c:0},
+{q:"Norma kesusilaan berasal dari…",a:["Hati nurani","UU","Media","Teman"],c:0},
+{q:"Penyebab tindakan tidak bertanggung jawab?",a:["Perencanaan matang","Minim edukasi","Tidak ada faktor","Semua sama"],c:1},
+{q:"Dampak pelanggaran norma hukum?",a:["Trauma","Bahagia","Hiburan","Tidak ada"],c:0},
+{q:"Kasus sulit terungkap karena…",a:["Pengawasan lemah","Tidak ada faktor","Media","Teman"],c:0},
+{q:"Norma kesusilaan menekankan…",a:["Moral","Kekuatan","Popularitas","Hukuman"],c:0},
+{q:"Faktor psikologis kekerasan?",a:["Depresi","Iseng","Tidak ada","Ekonomi saja"],c:0},
+{q:"Tujuan norma hukum?",a:["Melindungi masyarakat","Sensasi","Hiburan","Kontrol teman"],c:0},
+{q:"Pelanggaran kesusilaan?",a:["Menghina","Menolong","Empati","Sopan"],c:0},
+{q:"Peran sekolah?",a:["Edukasi","Diam","Tutup kasus","Salahkan korban"],c:0},
+{q:"Pentingnya edukasi?",a:["Paham risiko","Formalitas","Tidak penting","Bebas"],c:0},
+{q:"Sanksi norma hukum?",a:["Hukuman resmi","Rasa malu","Tidak ada","Teguran teman"],c:0},
+{q:"Norma kesusilaan membantu…",a:["Baik & buruk","Masalah","Bebas","Melanggar"],c:0},
+{q:"Tekanan sosial menyebabkan…",a:["Stres","Bahagia","Tenang","Tidak ada"],c:0},
+{q:"Cara mencegah kekerasan?",a:["Edukasi","Diam","Salahkan korban","Hindari semua"],c:0},
+{q:"Bukan urusan pribadi karena…",a:["Dampak luas","Tren","Cerita","Tidak ada hukum"],c:0},
+{q:"Sikap sesuai kesusilaan?",a:["Empati","Bullying","Kasar","Hina"],c:0},
+{q:"Kesimpulan studi kasus?",a:["Perlu peran keluarga & negara","Urusan pribadi","Tidak ada dampak","Tidak perlu solusi"],c:0}
+];
+
+let current=0,score=0,time=15,timer;
+
+function startGame(){
+document.getElementById("start").classList.add("hidden");
+document.getElementById("game").classList.remove("hidden");
+loadQuestion();
+}
+
+function loadQuestion(){
+time=15;
+updateTimer();
+let q=quiz[current];
+document.getElementById("info").innerText="Soal "+(current+1)+" / "+quiz.length+" | Skor: "+score;
+document.getElementById("question").innerText=q.q;
+
+let ans=document.getElementById("answers");
+ans.innerHTML="";
+
+q.a.forEach((t,i)=>{
+let btn=document.createElement("button");
+btn.innerText=t;
+btn.onclick=()=>selectAnswer(btn,i);
+ans.appendChild(btn);
+});
+
+document.getElementById("bar").style.width=(current/quiz.length*100)+"%";
+
+clearInterval(timer);
+timer=setInterval(()=>{
+time--;
+updateTimer();
+if(time<=0) nextQuestion();
+},1000);
+}
+
+function updateTimer(){
+document.getElementById("timer").innerText=time;
+}
+
+function selectAnswer(btn,i){
+clearInterval(timer);
+let correct=quiz[current].c;
+
+if(i===correct){
+btn.classList.add("correct");
+document.getElementById("soundCorrect").play();
+score++;
+}else{
+btn.classList.add("wrong");
+document.getElementById("soundWrong").play();
+}
+setTimeout(nextQuestion,700);
+}
+
+function nextQuestion(){
+current++;
+if(current<quiz.length){
+loadQuestion();
+}else{
+endGame();
+}
+}
+
+function endGame(){
+document.getElementById("game").classList.add("hidden");
+document.getElementById("result").classList.remove("hidden");
+document.getElementById("finalScore").innerText="Skor Akhir: "+score+" / "+quiz.length;
+confettiEffect();
+}
+
+function confettiEffect(){
+const canvas=document.getElementById("confetti");
+const ctx=canvas.getContext("2d");
+canvas.width=window.innerWidth;
+canvas.height=window.innerHeight;
+let pieces=[];
+for(let i=0;i<120;i++){
+pieces.push({x:Math.random()*canvas.width,y:Math.random()*canvas.height,r:Math.random()*6+4});
+}
+setInterval(()=>{
+ctx.clearRect(0,0,canvas.width,canvas.height);
+ctx.fillStyle="rgba(255,99,132,0.8)";
+pieces.forEach(p=>{
+ctx.beginPath();
+ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+ctx.fill();
+p.y+=2;
+if(p.y>canvas.height)p.y=0;
+});
+},20);
+}
+</script>
+
+</body>
+</html>
